@@ -3,14 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <title>Vendor Onboarding Demo (Standalone)</title>
-  <!-- Load Owl.js from CDN -->
-  <script type="module" src="https://unpkg.com/owl@3.1.0/dist/owl.esm.js"></script>
   <style>
     body { font-family: Arial, sans-serif; padding: 20px; }
-    form { display: flex; flex-direction: column; gap: 10px; max-width: 400px; }
+    .step { max-width: 500px; margin-bottom: 20px; }
+    form { display: flex; flex-direction: column; gap: 10px; }
     label { font-weight: bold; }
-    input, textarea { padding: 6px; }
-    button { padding: 8px; background: #4CAF50; color: white; border: none; cursor: pointer; }
+    input, textarea, select { padding: 6px; }
+    button { padding: 8px; margin-top: 10px; background: #4CAF50; color: white; border: none; cursor: pointer; }
+    button[disabled] { background: #ccc; cursor: not-allowed; }
+    .nav { display: flex; justify-content: space-between; }
+    pre { background: #f4f4f4; padding: 10px; border-radius: 5px; }
   </style>
 </head>
 <body>
@@ -18,36 +20,194 @@
   <div id="app"></div>
 
   <script type="module">
-    import { Component, mount } from "https://unpkg.com/owl@3.1.0/dist/owl.esm.js";
+    import { Component, mount, tags, useState } from "https://cdn.jsdelivr.net/npm/@odoo/owl/dist/owl.esm.js";
+    const { xml } = tags;
 
     class VendorOnboardingForm extends Component {
-      static template = `
-        <form t-on-submit.prevent="onSubmit">
-          <label>Name</label>
-          <input type="text" t-model="state.name"/>
+      setup() {
+        this.state = useState({
+          step: 1,
+          submitted: false,
+          form: {
+            company: "", website: "", category: "", address: "",
+            contact_name: "", contact_title: "", contact_email: "", contact_phone: "",
+            username: "", password: "", portal: false,
+            products: [], price_range: "", markets: "",
+            payment_terms: "", delivery_time: "", margin: "",
+            license: "", tax_id: "", billing: "",
+            bank_account: "", iban: "", swift: "", bank_name: ""
+          },
+          result: null
+        });
+      }
 
-          <label>Email</label>
-          <input type="email" t-model="state.email"/>
+      nextStep() { if (this.state.step < 4) this.state.step++; }
+      prevStep() { if (this.state.step > 1) this.state.step--; }
 
-          <label>Company</label>
-          <input type="text" t-model="state.company"/>
+      onFileChange(ev) {
+        const files = Array.from(ev.target.files).map(f => f.name);
+        this.state.form.products = files;
+      }
 
-          <label>Description</label>
-          <textarea t-model="state.description"></textarea>
+      onSubmit(ev) {
+        ev.preventDefault();
+        console.log("Captured JSON:", this.state.form);
 
-          <button type="submit">Submit</button>
-        </form>
-      `;
+        // Save JSON locally
+        const blob = new Blob([JSON.stringify(this.state.form, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "onboarding_submission.json";
+        a.click();
+        URL.revokeObjectURL(url);
 
-      state = { name: "", email: "", company: "", description: "" };
-
-      onSubmit() {
-        console.log("Form submitted:", this.state);
-        alert("Form submitted! Check console for data.");
+        this.state.submitted = true;
+        this.state.result = this.state.form;
       }
     }
+
+    VendorOnboardingForm.template = xml/* xml */`
+      <div>
+        <!-- Step 1: Company & Contact -->
+        <t t-if="state.step == 1 and !state.submitted">
+          <div class="step">
+            <h2>Step 1 – Company & Contact Setup</h2>
+            <form>
+              <label>Company Name</label>
+              <input type="text" t-model="state.form.company"/>
+
+              <label>Website</label>
+              <input type="url" t-model="state.form.website"/>
+
+              <label>Category</label>
+              <input type="text" t-model="state.form.category"/>
+
+              <label>Address</label>
+              <input type="text" t-model="state.form.address"/>
+
+              <label>Contact Name</label>
+              <input type="text" t-model="state.form.contact_name"/>
+
+              <label>Title</label>
+              <input type="text" t-model="state.form.contact_title"/>
+
+              <label>Email</label>
+              <input type="email" t-model="state.form.contact_email"/>
+
+              <label>Phone</label>
+              <input type="text" t-model="state.form.contact_phone"/>
+
+              <label>Username</label>
+              <input type="text" t-model="state.form.username"/>
+
+              <label>Password</label>
+              <input type="password" t-model="state.form.password"/>
+
+              <label><input type="checkbox" t-model="state.form.portal"/> Portal Access</label>
+
+              <div class="nav">
+                <span></span>
+                <button type="button" t-on-click="nextStep">Next</button>
+              </div>
+            </form>
+          </div>
+        </t>
+
+        <!-- Step 2: Product Upload -->
+        <t t-if="state.step == 2 and !state.submitted">
+          <div class="step">
+            <h2>Step 2 – Product Upload</h2>
+            <form>
+              <label>Upload Products</label>
+              <input type="file" multiple t-on-change="onFileChange"/>
+
+              <label>Average Retail Price Range</label>
+              <select t-model="state.form.price_range">
+                <option value="">Select</option>
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+              </select>
+
+              <label>Current Markets</label>
+              <input type="text" t-model="state.form.markets"/>
+
+              <div class="nav">
+                <button type="button" t-on-click="prevStep">Back</button>
+                <button type="button" t-on-click="nextStep">Next</button>
+              </div>
+            </form>
+          </div>
+        </t>
+
+        <!-- Step 3: Business Terms -->
+        <t t-if="state.step == 3 and !state.submitted">
+          <div class="step">
+            <h2>Step 3 – Business Terms</h2>
+            <form>
+              <label>Payment Terms</label>
+              <input type="text" t-model="state.form.payment_terms"/>
+
+              <label>Delivery Time</label>
+              <input type="text" t-model="state.form.delivery_time"/>
+
+              <label>Distributor Margin</label>
+              <input type="text" t-model="state.form.margin"/>
+
+              <div class="nav">
+                <button type="button" t-on-click="prevStep">Back</button>
+                <button type="button" t-on-click="nextStep">Next</button>
+              </div>
+            </form>
+          </div>
+        </t>
+
+        <!-- Step 4: Compliance & Billing -->
+        <t t-if="state.step == 4 and !state.submitted">
+          <div class="step">
+            <h2>Step 4 – Compliance & Billing</h2>
+            <form t-on-submit="onSubmit">
+              <label>Trade License</label>
+              <input type="text" t-model="state.form.license"/>
+
+              <label>Tax ID</label>
+              <input type="text" t-model="state.form.tax_id"/>
+
+              <label>Billing Details</label>
+              <input type="text" t-model="state.form.billing"/>
+
+              <label>Bank Account</label>
+              <input type="text" t-model="state.form.bank_account"/>
+
+              <label>IBAN</label>
+              <input type="text" t-model="state.form.iban"/>
+
+              <label>SWIFT</label>
+              <input type="text" t-model="state.form.swift"/>
+
+              <label>Bank Name</label>
+              <input type="text" t-model="state.form.bank_name"/>
+
+              <div class="nav">
+                <button type="button" t-on-click="prevStep">Back</button>
+                <button type="submit">Submit</button>
+              </div>
+            </form>
+          </div>
+        </t>
+
+        <!-- Confirmation -->
+        <t t-if="state.submitted">
+          <h2>✅ Submission Successful</h2>
+          <p>Your data was logged locally and downloaded as <code>onboarding_submission.json</code>.</p>
+          <pre><t t-esc="JSON.stringify(state.result, null, 2)"/></pre>
+        </t>
+      </div>
+    `;
 
     mount(VendorOnboardingForm, { target: document.getElementById("app") });
   </script>
 </body>
 </html>
+
