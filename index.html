@@ -4,23 +4,122 @@
   <meta charset="UTF-8" />
   <title>Vendor Onboarding Demo (Standalone)</title>
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; }
-    .step { max-width: 500px; margin-bottom: 20px; }
-    form { display: flex; flex-direction: column; gap: 10px; }
-    label { font-weight: bold; }
-    input, textarea, select { padding: 6px; }
-    button { padding: 8px; margin-top: 10px; background: #4CAF50; color: white; border: none; cursor: pointer; }
-    button[disabled] { background: #ccc; cursor: not-allowed; }
-    .nav { display: flex; justify-content: space-between; }
-    pre { background: #f4f4f4; padding: 10px; border-radius: 5px; }
-    .error { color: red; font-size: 0.9em; }
-    .progress { margin-bottom: 15px; }
-    .progress span { font-weight: bold; }
-    ul { margin: 0; padding: 0; list-style: square inside; }
+    body {
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      background: #f9fafb;
+      margin: 0;
+      padding: 20px;
+      color: #333;
+    }
+
+    h1 {
+      text-align: center;
+      color: #2c3e50;
+      margin-bottom: 30px;
+    }
+
+    .step {
+      max-width: 600px;
+      margin: 0 auto 30px auto;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    label {
+      font-weight: 600;
+      margin-bottom: 3px;
+    }
+
+    input, textarea, select {
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    input:focus, textarea:focus, select:focus {
+      outline: none;
+      border-color: #4CAF50;
+      box-shadow: 0 0 4px rgba(76,175,80,0.3);
+    }
+
+    button {
+      padding: 10px 15px;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 15px;
+      transition: background 0.3s;
+    }
+
+    button:hover {
+      background: #43a047;
+    }
+
+    button[disabled] {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    .nav {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 15px;
+    }
+
+    .error {
+      color: #e74c3c;
+      font-size: 0.9em;
+    }
+
+    .progress-bar {
+      max-width: 600px;
+      margin: 0 auto 20px auto;
+      height: 12px;
+      background: #e0e0e0;
+      border-radius: 6px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: #4CAF50;
+      width: 0%;
+      transition: width 0.4s ease;
+    }
+
+    pre {
+      background: #f4f4f4;
+      padding: 15px;
+      border-radius: 6px;
+      overflow-x: auto;
+    }
+
+    ul {
+      margin: 0;
+      padding-left: 20px;
+    }
   </style>
 </head>
 <body>
   <h1>Vendor Onboarding Demo (Standalone)</h1>
+
+  <!-- Progress bar -->
+  <div class="progress-bar">
+    <div id="progress-fill" class="progress-fill"></div>
+  </div>
+
   <div id="app"></div>
 
   <script type="module">
@@ -62,8 +161,15 @@
         return Object.keys(e).length === 0;
       }
 
-      nextStep() { if (this.validateStep() && this.state.step < 4) this.state.step++; }
-      prevStep() { if (this.state.step > 1) this.state.step--; }
+      updateProgress() {
+        const fill = document.getElementById("progress-fill");
+        if (fill) {
+          fill.style.width = ((this.state.step - 1) / 4) * 100 + "%";
+        }
+      }
+
+      nextStep() { if (this.validateStep() && this.state.step < 4) { this.state.step++; this.updateProgress(); } }
+      prevStep() { if (this.state.step > 1) { this.state.step--; this.updateProgress(); } }
 
       onFileChange(ev) {
         const files = Array.from(ev.target.files).map(f => f.name);
@@ -86,40 +192,38 @@
 
         this.state.submitted = true;
         this.state.result = this.state.form;
+        this.updateProgress();
       }
 
       restart() {
         this.state.step = 1;
         this.state.submitted = false;
         this.state.result = null;
-        this.state.form = {
-          company: "", website: "", category: "", address: "",
-          contact_name: "", contact_title: "", contact_email: "", contact_phone: "",
-          username: "", password: "", portal: false,
-          products: [], price_range: "", markets: "",
-          payment_terms: "", delivery_time: "", margin: "",
-          license: "", tax_id: "", billing: "",
-          bank_account: "", iban: "", swift: "", bank_name: ""
-        };
+        this.updateProgress();
       }
     }
 
     VendorOnboardingForm.template = xml/* xml */`
       <div>
-        <t t-if="!state.submitted">
-          <div class="progress">
-            <span>Step <t t-esc="state.step"/> of 4</span>
-          </div>
-        </t>
-
         <!-- Step 1 -->
         <t t-if="state.step == 1 and !state.submitted">
           <div class="step">
-            <h2>Company & Contact Setup</h2>
+            <h2>Step 1 – Company & Contact Setup</h2>
             <form>
               <label>Company Name *</label>
               <input type="text" t-model="state.form.company"/>
               <t t-if="state.errors.company"><div class="error"><t t-esc="state.errors.company"/></div></t>
+
+              <label>Contact Name *</label>
+              <input type="text" t-model="state.form.contact_name"/>
+              <t t-if="state.errors.contact_name"><div class="error"><t t-esc="state.errors.contact_name"/></div></t>
+
+              <label>Email *</label>
+              <input type="email" t-model="state.form.contact_email"/>
+              <t t-if="state.errors.contact_email"><div class="error"><t t-esc="state.errors.contact_email"/></div></t>
+
+              <label>Phone</label>
+              <input type="text" t-model="state.form.contact_phone"/>
 
               <label>Website</label>
               <input type="url" t-model="state.form.website"/>
@@ -129,20 +233,6 @@
 
               <label>Address</label>
               <input type="text" t-model="state.form.address"/>
-
-              <label>Contact Name *</label>
-              <input type="text" t-model="state.form.contact_name"/>
-              <t t-if="state.errors.contact_name"><div class="error"><t t-esc="state.errors.contact_name"/></div></t>
-
-              <label>Title</label>
-              <input type="text" t-model="state.form.contact_title"/>
-
-              <label>Email *</label>
-              <input type="email" t-model="state.form.contact_email"/>
-              <t t-if="state.errors.contact_email"><div class="error"><t t-esc="state.errors.contact_email"/></div></t>
-
-              <label>Phone</label>
-              <input type="text" t-model="state.form.contact_phone"/>
 
               <label>Username</label>
               <input type="text" t-model="state.form.username"/>
@@ -163,7 +253,7 @@
         <!-- Step 2 -->
         <t t-if="state.step == 2 and !state.submitted">
           <div class="step">
-            <h2>Product Upload</h2>
+            <h2>Step 2 – Product Upload</h2>
             <form>
               <label>Upload Products</label>
               <input type="file" multiple t-on-change="onFileChange"/>
@@ -197,7 +287,7 @@
         <!-- Step 3 -->
         <t t-if="state.step == 3 and !state.submitted">
           <div class="step">
-            <h2>Business Terms</h2>
+            <h2>Step 3 – Business Terms</h2>
             <form>
               <label>Payment Terms</label>
               <input type="text" t-model="state.form.payment_terms"/>
@@ -219,7 +309,7 @@
         <!-- Step 4 -->
         <t t-if="state.step == 4 and !state.submitted">
           <div class="step">
-            <h2>Compliance & Billing</h2>
+            <h2>Step 4 – Compliance & Billing</h2>
             <form t-on-submit="onSubmit">
               <label>Trade License</label>
               <input type="text" t-model="state.form.license"/>
@@ -254,10 +344,12 @@
 
         <!-- Confirmation -->
         <t t-if="state.submitted">
-          <h2>✅ Submission Successful</h2>
-          <p>Your data was logged locally and downloaded as <code>onboarding_submission.json</code>.</p>
-          <pre><t t-esc="JSON.stringify(state.result, null, 2)"/></pre>
-          <button t-on-click="restart">Start Again</button>
+          <div class="step">
+            <h2>✅ Submission Successful</h2>
+            <p>Your data was logged locally and downloaded as <code>onboarding_submission.json</code>.</p>
+            <pre><t t-esc="JSON.stringify(state.result, null, 2)"/></pre>
+            <button t-on-click="restart">Start Again</button>
+          </div>
         </t>
       </div>
     `;
