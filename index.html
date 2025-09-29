@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Vendor Onboarding Demo (Standalone)</title>
+  <!-- Load Owl.js from CDN -->
+  <script type="module" src="https://unpkg.com/owl@3.1.0/dist/owl.esm.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    form { display: flex; flex-direction: column; gap: 10px; max-width: 400px; }
+    label { font-weight: bold; }
+    input, textarea { padding: 6px; }
+    button { padding: 8px; background: #4CAF50; color: white; border: none; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h1>Vendor Onboarding Demo (Standalone)</h1>
+  <div id="app"></div>
+
+  <script type="module">
+    import { Component, mount } from "https://unpkg.com/owl@3.1.0/dist/owl.esm.js";
+
+    class VendorOnboardingForm extends Component {
+      static template = `
+        <form t-on-submit.prevent="onSubmit">
+          <label>Name</label>
+          <input type="text" t-model="state.name"/>
+
+          <label>Email</label>
+          <input type="email" t-model="state.email"/>
+
+          <label>Company</label>
+          <input type="text" t-model="state.company"/>
+
+          <label>Description</label>
+          <textarea t-model="state.description"></textarea>
+
+          <button type="submit">Submit</button>
+        </form>
+      `;
+
+      state = { name: "", email: "", company: "", description: "" };
+
+      onSubmit() {
+        console.log("Form submitted:", this.state);
+        alert("Form submitted! Check console for data.");
+      }
+    }
+
+    mount(VendorOnboardingForm, { target: document.getElementById("app") });
+  </script>
+</body>
+</html>
