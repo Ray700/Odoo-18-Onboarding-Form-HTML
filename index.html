@@ -3,358 +3,344 @@
 <head>
   <meta charset="UTF-8" />
   <title>Vendor Onboarding Demo (Standalone)</title>
-  <style>
-    body {
-      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-      background: #f9fafb;
-      margin: 0;
-      padding: 20px;
-      color: #333;
-    }
-
-    h1 {
-      text-align: center;
-      color: #2c3e50;
-      margin-bottom: 30px;
-    }
-
-    .step {
-      max-width: 600px;
-      margin: 0 auto 30px auto;
-      background: white;
-      padding: 20px;
-      border-radius: 10px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-    }
-
-    form {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    label {
-      font-weight: 600;
-      margin-bottom: 3px;
-    }
-
-    input, textarea, select {
-      padding: 8px;
-      border: 1px solid #ddd;
-      border-radius: 6px;
-      font-size: 14px;
-    }
-
-    input:focus, textarea:focus, select:focus {
-      outline: none;
-      border-color: #4CAF50;
-      box-shadow: 0 0 4px rgba(76,175,80,0.3);
-    }
-
-    button {
-      padding: 10px 15px;
-      background: #4CAF50;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 15px;
-      transition: background 0.3s;
-    }
-
-    button:hover {
-      background: #43a047;
-    }
-
-    button[disabled] {
-      background: #ccc;
-      cursor: not-allowed;
-    }
-
-    .nav {
-      display: flex;
-      justify-content: space-between;
-      margin-top: 15px;
-    }
-
-    .error {
-      color: #e74c3c;
-      font-size: 0.9em;
-    }
-
-    .progress-bar {
-      max-width: 600px;
-      margin: 0 auto 20px auto;
-      height: 12px;
-      background: #e0e0e0;
-      border-radius: 6px;
-      overflow: hidden;
-      position: relative;
-    }
-
-    .progress-fill {
-      height: 100%;
-      background: #4CAF50;
-      width: 0%;
-      transition: width 0.4s ease;
-    }
-
-    pre {
-      background: #f4f4f4;
-      padding: 15px;
-      border-radius: 6px;
-      overflow-x: auto;
-    }
-
-    ul {
-      margin: 0;
-      padding-left: 20px;
-    }
-  </style>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
 </head>
 <body>
-  <h1>Vendor Onboarding Demo (Standalone)</h1>
-
   <!-- Progress bar -->
-  <div class="progress-bar">
-    <div id="progress-fill" class="progress-fill"></div>
+  <div class="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 flex flex-col items-center justify-center font-inter">
+    <div class="max-w-2xl w-full mx-auto">
+      <div class="flex flex-col items-center mb-6">
+        <img src="onboarding.png" alt="Onboarding" class="w-32 h-32 mb-2 animate-bounce-slow" />
+        <h1 class="text-5xl font-extrabold text-center text-slate-800 mb-2 tracking-tight drop-shadow-lg">Vendor Onboarding</h1>
+        <p class="text-center text-lg text-slate-500 mb-2">Welcome! Please complete the onboarding form below to get started.</p>
+      </div>
+      <div class="flex items-center justify-center mb-8">
+        <div class="flex gap-6">
+          <template id="step-indicator-template"></template>
+        </div>
+      </div>
+      <div class="w-full bg-gray-200 rounded-full h-4 mb-10 shadow">
+        <div id="progress" class="bg-gradient-to-r from-purple-400 to-pink-400 h-4 rounded-full transition-all duration-500" style="width:0%"></div>
+      </div>
+      <div id="form-container" class="relative overflow-hidden"></div>
+    </div>
+    <footer class="mt-12 text-slate-400 text-sm">&copy; 2025 Vendor Portal. All rights reserved.</footer>
   </div>
+  <script>
+    // Form data and state
+    const formData = {
+      company: "", website: "", category: "", address: "",
+      contact_name: "", contact_title: "", contact_email: "", contact_phone: "",
+      username: "", password: "", portal: false,
+      products: [], price_range: "", markets: "",
+      payment_terms: "", delivery_time: "", margin: "",
+      license: "", tax_id: "", billing: "",
+      bank_account: "", iban: "", swift: "", bank_name: ""
+    };
+    let currentStep = 0;
+    let submitted = false;
+    let errors = {};
+    const steps = [
+      { label: "Company & Contact", icon: "<svg class='w-7 h-7' fill='none' stroke='currentColor' stroke-width='2' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' d='M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14v7m-7-7a7 7 0 0114 0v1a2 2 0 01-2 2H7a2 2 0 01-2-2v-1z'/></svg>" },
+      { label: "Product Upload", icon: "<svg class='w-7 h-7' fill='none' stroke='currentColor' stroke-width='2' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' d='M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M4 12l1.41-1.41a2 2 0 012.83 0L12 15l3.76-3.76a2 2 0 012.83 0L20 12M12 15V3'/></svg>" },
+      { label: "Business Terms", icon: "<svg class='w-7 h-7' fill='none' stroke='currentColor' stroke-width='2' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' d='M9 17v-2a2 2 0 012-2h2a2 2 0 012 2v2m-6 4h6a2 2 0 002-2v-6a2 2 0 00-2-2h-6a2 2 0 00-2 2v6a2 2 0 002 2z'/></svg>" },
+      { label: "Compliance & Billing", icon: "<svg class='w-7 h-7' fill='none' stroke='currentColor' stroke-width='2' viewBox='0 0 24 24'><path stroke-linecap='round' stroke-linejoin='round' d='M9 12h6m2 8H7a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v12a2 2 0 01-2 2z'/></svg>" }
+    ];
 
-  <div id="app"></div>
+    // Utility for sliding animation
+    function slideToStep(newStep) {
+      const container = document.getElementById("form-container");
+      container.style.height = container.firstChild ? container.firstChild.offsetHeight + "px" : "auto";
+      container.innerHTML = renderStep(newStep);
+      setTimeout(() => {
+        container.style.height = container.firstChild.offsetHeight + "px";
+      }, 10);
+      updateProgress(newStep);
+      renderStepIndicator(newStep);
+    }
 
-  <script type="module">
-    import { Component, mount, tags, useState } from "https://cdn.jsdelivr.net/npm/@odoo/owl@2.0.0/dist/owl.esm.js";
-    const { xml } = tags;
+    function updateProgress(step) {
+      document.getElementById("progress").style.width = ((step) / (steps.length)) * 100 + "%";
+    }
 
-    class VendorOnboardingForm extends Component {
-      setup() {
-        this.state = useState({
-          step: 1,
-          submitted: false,
-          errors: {},
-          form: {
-            company: "", website: "", category: "", address: "",
-            contact_name: "", contact_title: "", contact_email: "", contact_phone: "",
-            username: "", password: "", portal: false,
-            products: [], price_range: "", markets: "",
-            payment_terms: "", delivery_time: "", margin: "",
-            license: "", tax_id: "", billing: "",
-            bank_account: "", iban: "", swift: "", bank_name: ""
-          },
-          result: null
-        });
+    function renderStepIndicator(step) {
+      const indicator = steps.map((s, i) => `
+        <div class="flex flex-col items-center">
+          <div class="relative">
+            <div class="rounded-full border-4 ${i < step ? 'border-green-400 bg-green-400' : i === step ? 'border-blue-400 bg-white' : 'border-gray-300 bg-gray-100'} w-14 h-14 flex items-center justify-center shadow-lg transition-all duration-300">
+              ${s.icon}
+              <span class="absolute -top-2 -right-2 text-xs font-bold text-white bg-blue-400 rounded-full px-2 py-1 shadow ${i === step ? '' : 'hidden'}">${i+1}</span>
+            </div>
+          </div>
+          <span class="mt-2 text-base font-semibold text-slate-700 ${i === step ? 'text-blue-500' : i < step ? 'text-green-500' : 'text-gray-400'}">${s.label}</span>
+        </div>
+        ${i < steps.length-1 ? `<div class="w-10 h-1 bg-gray-300 rounded-full mx-2 ${i < step ? 'bg-green-400' : ''}"></div>` : ''}
+      `).join("");
+      document.querySelector(".flex.gap-6").innerHTML = indicator;
+    }
+
+    function validateStep(step) {
+      errors = {};
+      if (step === 0) {
+        if (!formData.company) errors.company = "Company name required";
+        if (!formData.contact_name) errors.contact_name = "Contact name required";
+        if (!formData.contact_email) errors.contact_email = "Email required";
+        else if (!/^\S+@\S+\.\S+$/.test(formData.contact_email)) errors.contact_email = "Invalid email format";
       }
-
-      validateStep() {
-        const e = {};
-        if (this.state.step === 1) {
-          if (!this.state.form.company) e.company = "Company name required";
-          if (!this.state.form.contact_name) e.contact_name = "Contact name required";
-          if (!this.state.form.contact_email) e.contact_email = "Email required";
-          else if (!/^[^@]+@[^@]+\.[^@]+$/.test(this.state.form.contact_email)) e.contact_email = "Invalid email format";
-        }
-        if (this.state.step === 4) {
-          if (!this.state.form.tax_id) e.tax_id = "Tax ID required";
-          if (!this.state.form.bank_account) e.bank_account = "Bank account required";
-        }
-        this.state.errors = e;
-        return Object.keys(e).length === 0;
+      if (step === 3) {
+        if (!formData.tax_id) errors.tax_id = "Tax ID required";
+        if (!formData.bank_account) errors.bank_account = "Bank account required";
       }
+      return Object.keys(errors).length === 0;
+    }
 
-      updateProgress() {
-        const fill = document.getElementById("progress-fill");
-        if (fill) {
-          fill.style.width = ((this.state.step - 1) / 4) * 100 + "%";
-        }
+    function handleNext() {
+      if (!validateStep(currentStep)) {
+        slideToStep(currentStep);
+        return;
       }
-
-      nextStep() { if (this.validateStep() && this.state.step < 4) { this.state.step++; this.updateProgress(); } }
-      prevStep() { if (this.state.step > 1) { this.state.step--; this.updateProgress(); } }
-
-      onFileChange(ev) {
-        const files = Array.from(ev.target.files).map(f => f.name);
-        this.state.form.products = files;
-      }
-
-      onSubmit(ev) {
-        ev.preventDefault();
-        if (!this.validateStep()) return;
-        console.log("Captured JSON:", this.state.form);
-
-        // Save JSON locally
-        const blob = new Blob([JSON.stringify(this.state.form, null, 2)], { type: "application/json" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "onboarding_submission.json";
-        a.click();
-        URL.revokeObjectURL(url);
-
-        this.state.submitted = true;
-        this.state.result = this.state.form;
-        this.updateProgress();
-      }
-
-      restart() {
-        this.state.step = 1;
-        this.state.submitted = false;
-        this.state.result = null;
-        this.updateProgress();
+      if (currentStep < steps.length - 1) {
+        currentStep++;
+        slideToStep(currentStep);
       }
     }
 
-    VendorOnboardingForm.template = xml/* xml */`
-      <div>
-        <!-- Step 1 -->
-        <t t-if="state.step == 1 and !state.submitted">
-          <div class="step">
-            <h2>Step 1 – Company & Contact Setup</h2>
-            <form>
-              <label>Company Name *</label>
-              <input type="text" t-model="state.form.company"/>
-              <t t-if="state.errors.company"><div class="error"><t t-esc="state.errors.company"/></div></t>
+    function handleBack() {
+      if (currentStep > 0) {
+        currentStep--;
+        slideToStep(currentStep);
+      }
+    }
 
-              <label>Contact Name *</label>
-              <input type="text" t-model="state.form.contact_name"/>
-              <t t-if="state.errors.contact_name"><div class="error"><t t-esc="state.errors.contact_name"/></div></t>
+    function handleFileChange(e) {
+      formData.products = Array.from(e.target.files).map(f => f.name);
+      slideToStep(currentStep);
+    }
 
-              <label>Email *</label>
-              <input type="email" t-model="state.form.contact_email"/>
-              <t t-if="state.errors.contact_email"><div class="error"><t t-esc="state.errors.contact_email"/></div></t>
+    function handleSubmit(e) {
+      e.preventDefault();
+      if (!validateStep(currentStep)) {
+        slideToStep(currentStep);
+        return;
+      }
+      submitted = true;
+      updateProgress(steps.length);
+      document.getElementById("form-container").innerHTML = renderConfirmation();
+      // Download JSON
+      const blob = new Blob([JSON.stringify(formData, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "onboarding_submission.json";
+      a.click();
+      URL.revokeObjectURL(url);
+    }
 
-              <label>Phone</label>
-              <input type="text" t-model="state.form.contact_phone"/>
+    function handleRestart() {
+      Object.keys(formData).forEach(k => formData[k] = Array.isArray(formData[k]) ? [] : "");
+      submitted = false;
+      currentStep = 0;
+      slideToStep(0);
+      updateProgress(0);
+    }
 
-              <label>Website</label>
-              <input type="url" t-model="state.form.website"/>
-
-              <label>Category</label>
-              <input type="text" t-model="state.form.category"/>
-
-              <label>Address</label>
-              <input type="text" t-model="state.form.address"/>
-
-              <label>Username</label>
-              <input type="text" t-model="state.form.username"/>
-
-              <label>Password</label>
-              <input type="password" t-model="state.form.password"/>
-
-              <label><input type="checkbox" t-model="state.form.portal"/> Portal Access</label>
-
-              <div class="nav">
-                <span></span>
-                <button type="button" t-on-click="nextStep">Next</button>
-              </div>
-            </form>
+    function renderStep(step) {
+      // Common input style
+      const inputClass = "input text-lg placeholder-slate-400 bg-slate-50 border-2 border-slate-200 focus:border-blue-400 focus:bg-white";
+      // Step 1
+      if (step === 0) {
+        return `
+        <form class="bg-white rounded-3xl shadow-2xl p-10 animate-fade-in" autocomplete="off" onsubmit="return false;">
+          <h2 class="text-3xl font-bold mb-8 text-slate-700 tracking-tight">Step 1 – Company & Contact Setup</h2>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div>
+              <label class="font-semibold text-lg mb-2 block">Company Name *</label>
+              <input type="text" class="${inputClass}" placeholder="e.g. Acme Corp" value="${formData.company}" oninput="formData.company=this.value" />
+              ${errors.company ? `<div class='text-red-500 text-base mt-1'>${errors.company}</div>` : ""}
+            </div>
+            <div>
+              <label class="font-semibold text-lg mb-2 block">Contact Name *</label>
+              <input type="text" class="${inputClass}" placeholder="e.g. John Doe" value="${formData.contact_name}" oninput="formData.contact_name=this.value" />
+              ${errors.contact_name ? `<div class='text-red-500 text-base mt-1'>${errors.contact_name}</div>` : ""}
+            </div>
+            <div>
+              <label class="font-semibold text-lg mb-2 block">Email *</label>
+              <input type="email" class="${inputClass}" placeholder="e.g. john@acme.com" value="${formData.contact_email}" oninput="formData.contact_email=this.value" />
+              ${errors.contact_email ? `<div class='text-red-500 text-base mt-1'>${errors.contact_email}</div>` : ""}
+            </div>
+            <div>
+              <label class="font-semibold text-lg mb-2 block">Phone</label>
+              <input type="text" class="${inputClass}" placeholder="e.g. +1 234 567 890" value="${formData.contact_phone}" oninput="formData.contact_phone=this.value" />
+            </div>
+            <div>
+              <label class="font-semibold text-lg mb-2 block">Website</label>
+              <input type="url" class="${inputClass}" placeholder="e.g. acme.com" value="${formData.website}" oninput="formData.website=this.value" />
+            </div>
+            <div>
+              <label class="font-semibold text-lg mb-2 block">Category</label>
+              <input type="text" class="${inputClass}" placeholder="e.g. Electronics" value="${formData.category}" oninput="formData.category=this.value" />
+            </div>
+            <div>
+              <label class="font-semibold text-lg mb-2 block">Address</label>
+              <input type="text" class="${inputClass}" placeholder="e.g. 123 Main St, NY" value="${formData.address}" oninput="formData.address=this.value" />
+            </div>
+            <div>
+              <label class="font-semibold text-lg mb-2 block">Username</label>
+              <input type="text" class="${inputClass}" placeholder="Choose a username" value="${formData.username}" oninput="formData.username=this.value" />
+            </div>
+            <div>
+              <label class="font-semibold text-lg mb-2 block">Password</label>
+              <input type="password" class="${inputClass}" placeholder="Create a password" value="${formData.password}" oninput="formData.password=this.value" />
+            </div>
+            <div class="flex items-center mt-2">
+              <input type="checkbox" ${formData.portal ? "checked" : ""} onchange="formData.portal=this.checked" class="w-5 h-5 accent-blue-500" />
+              <label class="ml-3 text-lg">Portal Access</label>
+            </div>
           </div>
-        </t>
-
-        <!-- Step 2 -->
-        <t t-if="state.step == 2 and !state.submitted">
-          <div class="step">
-            <h2>Step 2 – Product Upload</h2>
-            <form>
-              <label>Upload Products</label>
-              <input type="file" multiple t-on-change="onFileChange"/>
-              <t t-if="state.form.products.length">
-                <ul>
-                  <t t-foreach="state.form.products" t-as="p" t-key="p">
-                    <li><t t-esc="p"/></li>
-                  </t>
-                </ul>
-              </t>
-
-              <label>Average Retail Price Range</label>
-              <select t-model="state.form.price_range">
+          <div class="flex justify-end mt-10">
+            <button type="button" onclick="handleNext()" class="btn-gradient">Next &rarr;</button>
+          </div>
+        </form>`;
+      }
+      // Step 2
+      if (step === 1) {
+        return `
+        <form class="bg-white rounded-3xl shadow-2xl p-10 animate-fade-in" autocomplete="off" onsubmit="return false;">
+          <h2 class="text-3xl font-bold mb-8 text-slate-700 tracking-tight">Step 2 – Product Upload</h2>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div>
+              <label class="font-semibold text-lg mb-2 block">Upload Products</label>
+              <input type="file" multiple onchange="handleFileChange(event)" class="${inputClass}" />
+              ${formData.products.length ? `<ul class='list-disc ml-6 mt-2 text-base text-slate-600'>${formData.products.map(p => `<li>${p}</li>`).join("")}</ul>` : ""}
+            </div>
+            <div>
+              <label class="font-semibold text-lg mb-2 block">Average Retail Price Range</label>
+              <select class="${inputClass}" onchange="formData.price_range=this.value;slideToStep(currentStep)">
                 <option value="">Select</option>
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
+                <option value="low" ${formData.price_range=="low"?"selected":""}>Low</option>
+                <option value="medium" ${formData.price_range=="medium"?"selected":""}>Medium</option>
+                <option value="high" ${formData.price_range=="high"?"selected":""}>High</option>
               </select>
-
-              <label>Current Markets</label>
-              <input type="text" t-model="state.form.markets"/>
-
-              <div class="nav">
-                <button type="button" t-on-click="prevStep">Back</button>
-                <button type="button" t-on-click="nextStep">Next</button>
-              </div>
-            </form>
+            </div>
+            <div class="md:col-span-2">
+              <label class="font-semibold text-lg mb-2 block">Current Markets</label>
+              <input type="text" class="${inputClass}" placeholder="e.g. US, EU, Asia" value="${formData.markets}" oninput="formData.markets=this.value" />
+            </div>
           </div>
-        </t>
-
-        <!-- Step 3 -->
-        <t t-if="state.step == 3 and !state.submitted">
-          <div class="step">
-            <h2>Step 3 – Business Terms</h2>
-            <form>
-              <label>Payment Terms</label>
-              <input type="text" t-model="state.form.payment_terms"/>
-
-              <label>Delivery Time</label>
-              <input type="text" t-model="state.form.delivery_time"/>
-
-              <label>Distributor Margin</label>
-              <input type="text" t-model="state.form.margin"/>
-
-              <div class="nav">
-                <button type="button" t-on-click="prevStep">Back</button>
-                <button type="button" t-on-click="nextStep">Next</button>
-              </div>
-            </form>
+          <div class="flex justify-between mt-10">
+            <button type="button" onclick="handleBack()" class="btn-gradient">&larr; Back</button>
+            <button type="button" onclick="handleNext()" class="btn-gradient">Next &rarr;</button>
           </div>
-        </t>
-
-        <!-- Step 4 -->
-        <t t-if="state.step == 4 and !state.submitted">
-          <div class="step">
-            <h2>Step 4 – Compliance & Billing</h2>
-            <form t-on-submit="onSubmit">
-              <label>Trade License</label>
-              <input type="text" t-model="state.form.license"/>
-
-              <label>Tax ID *</label>
-              <input type="text" t-model="state.form.tax_id"/>
-              <t t-if="state.errors.tax_id"><div class="error"><t t-esc="state.errors.tax_id"/></div></t>
-
-              <label>Billing Details</label>
-              <input type="text" t-model="state.form.billing"/>
-
-              <label>Bank Account *</label>
-              <input type="text" t-model="state.form.bank_account"/>
-              <t t-if="state.errors.bank_account"><div class="error"><t t-esc="state.errors.bank_account"/></div></t>
-
-              <label>IBAN</label>
-              <input type="text" t-model="state.form.iban"/>
-
-              <label>SWIFT</label>
-              <input type="text" t-model="state.form.swift"/>
-
-              <label>Bank Name</label>
-              <input type="text" t-model="state.form.bank_name"/>
-
-              <div class="nav">
-                <button type="button" t-on-click="prevStep">Back</button>
-                <button type="submit">Submit</button>
-              </div>
-            </form>
+        </form>`;
+      }
+      // Step 3
+      if (step === 2) {
+        return `
+        <form class="bg-white rounded-3xl shadow-2xl p-10 animate-fade-in" autocomplete="off" onsubmit="return false;">
+          <h2 class="text-3xl font-bold mb-8 text-slate-700 tracking-tight">Step 3 – Business Terms</h2>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div>
+              <label class="font-semibold text-lg mb-2 block">Payment Terms</label>
+              <input type="text" class="${inputClass}" placeholder="e.g. Net 30" value="${formData.payment_terms}" oninput="formData.payment_terms=this.value" />
+            </div>
+            <div>
+              <label class="font-semibold text-lg mb-2 block">Delivery Time</label>
+              <input type="text" class="${inputClass}" placeholder="e.g. 7 days" value="${formData.delivery_time}" oninput="formData.delivery_time=this.value" />
+            </div>
+            <div class="md:col-span-2">
+              <label class="font-semibold text-lg mb-2 block">Distributor Margin</label>
+              <input type="text" class="${inputClass}" placeholder="e.g. 15%" value="${formData.margin}" oninput="formData.margin=this.value" />
+            </div>
           </div>
-        </t>
-
-        <!-- Confirmation -->
-        <t t-if="state.submitted">
-          <div class="step">
-            <h2>✅ Submission Successful</h2>
-            <p>Your data was logged locally and downloaded as <code>onboarding_submission.json</code>.</p>
-            <pre><t t-esc="JSON.stringify(state.result, null, 2)"/></pre>
-            <button t-on-click="restart">Start Again</button>
+          <div class="flex justify-between mt-10">
+            <button type="button" onclick="handleBack()" class="btn-gradient">&larr; Back</button>
+            <button type="button" onclick="handleNext()" class="btn-gradient">Next &rarr;</button>
           </div>
-        </t>
-      </div>
+        </form>`;
+      }
+      // Step 4
+      if (step === 3) {
+        return `
+        <form class="bg-white rounded-3xl shadow-2xl p-10 animate-fade-in" autocomplete="off" onsubmit="handleSubmit(event)">
+          <h2 class="text-3xl font-bold mb-8 text-slate-700 tracking-tight">Step 4 – Compliance & Billing</h2>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div>
+              <label class="font-semibold text-lg mb-2 block">Trade License</label>
+              <input type="text" class="${inputClass}" placeholder="e.g. TL-123456" value="${formData.license}" oninput="formData.license=this.value" />
+            </div>
+            <div>
+              <label class="font-semibold text-lg mb-2 block">Tax ID *</label>
+              <input type="text" class="${inputClass}" placeholder="e.g. TAX-987654" value="${formData.tax_id}" oninput="formData.tax_id=this.value" />
+              ${errors.tax_id ? `<div class='text-red-500 text-base mt-1'>${errors.tax_id}</div>` : ""}
+            </div>
+            <div>
+              <label class="font-semibold text-lg mb-2 block">Billing Details</label>
+              <input type="text" class="${inputClass}" placeholder="e.g. Invoice to Acme Corp" value="${formData.billing}" oninput="formData.billing=this.value" />
+            </div>
+            <div>
+              <label class="font-semibold text-lg mb-2 block">Bank Account *</label>
+              <input type="text" class="${inputClass}" placeholder="e.g. 1234567890" value="${formData.bank_account}" oninput="formData.bank_account=this.value" />
+              ${errors.bank_account ? `<div class='text-red-500 text-base mt-1'>${errors.bank_account}</div>` : ""}
+            </div>
+            <div>
+              <label class="font-semibold text-lg mb-2 block">IBAN</label>
+              <input type="text" class="${inputClass}" placeholder="e.g. GB29NWBK60161331926819" value="${formData.iban}" oninput="formData.iban=this.value" />
+            </div>
+            <div>
+              <label class="font-semibold text-lg mb-2 block">SWIFT</label>
+              <input type="text" class="${inputClass}" placeholder="e.g. DEUTDEFF" value="${formData.swift}" oninput="formData.swift=this.value" />
+            </div>
+            <div>
+              <label class="font-semibold text-lg mb-2 block">Bank Name</label>
+              <input type="text" class="${inputClass}" placeholder="e.g. Deutsche Bank" value="${formData.bank_name}" oninput="formData.bank_name=this.value" />
+            </div>
+          </div>
+          <div class="flex justify-between mt-10">
+            <button type="button" onclick="handleBack()" class="btn-gradient">&larr; Back</button>
+            <button type="submit" class="btn-gradient">Submit &rarr;</button>
+          </div>
+        </form>`;
+      }
+      return "";
+    }
+
+    function renderConfirmation() {
+      return `
+        <div class="bg-white rounded-3xl shadow-2xl p-10 animate-fade-in text-center">
+          <div class="flex justify-center mb-6">
+            <span class="inline-block bg-gradient-to-r from-green-400 to-blue-400 rounded-full p-4 animate-success-pop">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+            </span>
+          </div>
+          <h2 class="text-4xl font-extrabold mb-4 text-green-600 animate-success-pop">Submission Successful</h2>
+          <p class="mb-6 text-lg text-slate-600">Your data was logged locally and downloaded as <code class="bg-slate-100 px-2 py-1 rounded">onboarding_submission.json</code>.</p>
+          <pre class="bg-gray-100 rounded-xl p-6 text-base overflow-x-auto mb-6 text-left">${JSON.stringify(formData, null, 2)}</pre>
+          <button onclick="handleRestart()" class="btn-gradient">Start Again</button>
+        </div>
+      `;
+    }
+
+    // Tailwind utility classes for inputs and buttons
+    const style = document.createElement('style');
+    style.innerHTML = `
+      .font-inter { font-family: 'Inter', sans-serif; }
+      .input { @apply w-full px-5 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-400 transition text-lg bg-slate-50; }
+  .btn-gradient { @apply px-8 py-3 font-bold text-lg rounded-xl shadow-lg text-white bg-gradient-to-r from-purple-500 to-pink-500 hover:from-pink-500 hover:to-purple-500 transition-all duration-300 relative overflow-hidden; letter-spacing: 0.03em; }
+  .btn-gradient:active::after { content: ''; position: absolute; left: 50%; top: 50%; width: 120%; height: 120%; background: rgba(255,255,255,0.2); border-radius: 50%; transform: translate(-50%,-50%) scale(0); animation: ripple 0.4s linear; pointer-events: none; }
+  @keyframes ripple { to { transform: translate(-50%,-50%) scale(1); opacity: 0; } }
+      .animate-fade-in { animation: fadeIn 0.5s; }
+      @keyframes fadeIn { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: none; } }
+      .animate-bounce-slow { animation: bounce 2.5s infinite; }
+      @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
+      .animate-success-pop { animation: pop 0.7s cubic-bezier(.17,.67,.83,.67); }
+      @keyframes pop { 0% { transform: scale(0.7); opacity: 0; } 60% { transform: scale(1.1); opacity: 1; } 100% { transform: scale(1); } }
     `;
+    document.head.appendChild(style);
 
-    mount(VendorOnboardingForm, { target: document.getElementById("app") });
+    // Initial render
+  slideToStep(0);
+  updateProgress(0);
   </script>
 </body>
 </html>
